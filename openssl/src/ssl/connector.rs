@@ -66,6 +66,28 @@ impl SslConnectorBuilder {
     pub fn new(method: SslMethod) -> Result<SslConnectorBuilder, ErrorStack> {
         let mut ctx = ctx(method)?;
         ctx.set_default_verify_paths()?;
+        
+        // From https://github.com/dten/rust-openssl/commit/72da006c498f8ae518be0bc936c78de2b86a0f1d
+        #[cfg(target_os = "android")]
+        {
+            use std::fs;
+            use std::io::Read;
+
+            let cert_store = ctx.cert_store_mut();
+
+            if let Ok(certs) = fs::read_dir("/system/etc/security/cacerts") {
+                for entry in certs.filter_map(|r| r.ok()).filter(|e| e.path().is_file()) {
+                    let mut cert = String::new();
+                    if let Ok(_) = fs::File::open(entry.path())
+                        .and_then(|mut f| f.read_to_string(&mut cert)) {
+                            if let Ok(cert) = X509::from_pem(cert.as_bytes()) {
+                                try!(cert_store.add_cert(cert));
+                            }
+                        }
+                }
+            }
+        }
+
         // From https://github.com/python/cpython/blob/a170fa162dc03f0a014373349e548954fff2e567/Lib/ssl.py#L193
         ctx.set_cipher_list(
             "TLS13-AES-256-GCM-SHA384:TLS13-CHACHA20-POLY1305-SHA256:\
