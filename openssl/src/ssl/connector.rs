@@ -7,7 +7,7 @@ use ssl::{self, HandshakeError, Ssl, SslRef, SslContext, SslContextBuilder, SslM
           SSL_VERIFY_PEER};
 use pkey::PKeyRef;
 use version;
-use x509::X509Ref;
+use x509::{X509, X509Ref};
 
 #[cfg(ossl101)]
 lazy_static! {
